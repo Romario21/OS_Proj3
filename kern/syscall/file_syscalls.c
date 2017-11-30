@@ -59,7 +59,6 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	  return result;
 	
 	
-
 			       /*	
 	(void) upath; // suppress compilation warning until code gets written
 	(void) flags; // suppress compilation warning until code gets written
@@ -80,6 +79,7 @@ int
 sys_read(int fd, userptr_t buf, size_t size, int *retval)
 {
        int result = 0;
+       struct openfile *file;
 
        /* 
         * Your implementation of system call read starts here.  
@@ -92,12 +92,31 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
        if(result)
 	 return result;
 
-       //sontructed uio struct
+       lock_aquire(file->of_lock);//check
+
+       if(file->of_accmode == O_WRONLY){
+	 lock_release(file->of_lock);
+	 return dasdasd; //check
+       }
+
+       //contructed uio struct
        struct uio *temp;
 
        //call VOP_READ
-       VOP_READ(, temp);
+       result = VOP_READ(file->of_vnode, temp);
+       if(result)
+	 {
+	   lock_release(file->of_lock);
+	   return result;
+	 }
 
+       //check:seek position
+       file->of_offset = temp->uio_offset;
+
+       //unlock
+       lock_release(file->of_lock);
+
+       *retval = size - temp->uio_reside; //check
 
        //file_table_put()
        result = filetable_put(, fd, );
@@ -151,6 +170,16 @@ sys_close(int fd, userptr_t buf, size_t size, int *retval)
 
 }
 
+int
+sys_meld(int fd1, int fd2, int fd3)
+{
+  int result = 0;
+
+  
+
+
+  return result;
+}
 /*
  * write() - write data to a file
  */

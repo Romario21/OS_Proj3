@@ -122,6 +122,7 @@ int open(const char *filename, int flags, ...);
 ssize_t read(int filehandle, void *buf, size_t size);
 ssize_t write(int filehandle, const void *buf, size_t size);
 int close(int filehandle);
+int meld(char *pn1, char *pn2, char *pn3);
 int reboot(int code);
 int sync(void);
 /* mkdir - see sys/stat.h */

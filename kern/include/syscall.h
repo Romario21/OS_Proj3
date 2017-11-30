@@ -68,7 +68,7 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval);
 int sys_write(int fd, userptr_t buf, size_t size, int *retval);
 int sys_close(int fd, userptr_t buf, size_t size, int *retval);
 
-//int sys_meld(char *pn1, char *pn2, char *pn3);
+int sys_meld(int fd1, int fd2, int fd3);
 
 
 #endif /* _SYSCALL_H_ */
