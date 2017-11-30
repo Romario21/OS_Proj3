@@ -40,12 +40,27 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	 */
 
 	//copy supplied path name
-	kpath = (char*)kmalloc((char)(MAX);
-
-	int temp = openfile_open(kpath, flags, mode, &file);
-
-
 	
+	kpath = (char*)kmalloc((char)(MAX));
+
+	//int temp = openfile_open(kpath, flags, mode, &file);
+
+	result = copyinstr(upath, kpath, sizeof(kpath), NULL);
+	if(result)
+	  return result;
+	
+	//openfile_open();
+	result = openfile_open(kpath, flags, mode, &file);
+	if(result)
+	  return result;
+
+	result = filetable_place(proc->p_filetable, file, NULL);
+	if(result)
+	  return result;
+	
+	
+
+			       /*	
 	(void) upath; // suppress compilation warning until code gets written
 	(void) flags; // suppress compilation warning until code gets written
 	(void) mode; // suppress compilation warning until code gets written
@@ -53,6 +68,7 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	(void) allflags; // suppress compilation warning until code gets written
 	(void) kpath; // suppress compilation warning until code gets written
 	(void) file; // suppress compilation warning until code gets written
+			       */
 
 	return result;
 }
@@ -76,6 +92,23 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
        (void) retval; // suppress compilation warning until code gets written
 
        return result;
+}
+
+
+/* You need to add more for sys_meld, sys_write, and sys_close */
+
+int
+sys_write(int fd, userptr_t buf, size_t size, int *retval)
+{
+
+
+}
+ 
+int
+sys_close(int fd, userptr_t buf, size_t size, int *retval)
+{
+
+
 }
 
 /*
