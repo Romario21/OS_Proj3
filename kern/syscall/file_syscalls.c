@@ -41,7 +41,7 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 
 	//copy supplied path name
 	
-	kpath = (char*)kmalloc((char)(MAX));
+	kpath = (char*)kmalloc((char)(PATH_MAX));
 
 	//int temp = openfile_open(kpath, flags, mode, &file);
 
@@ -86,11 +86,31 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
         *
         * Check the design document design/filesyscall.txt for the steps
         */
+
+       //translate the fd # to an open file object
+       result = filetable_get(, fd, );
+       if(result)
+	 return result;
+
+       //sontructed uio struct
+       struct uio *temp;
+
+       //call VOP_READ
+       VOP_READ(, temp);
+
+
+       //file_table_put()
+       result = filetable_put(, fd, );
+       if(result)
+	 return result;
+
+       
+       /*
        (void) fd; // suppress compilation warning until code gets written
        (void) buf; // suppress compilation warning until code gets written
        (void) size; // suppress compilation warning until code gets written
        (void) retval; // suppress compilation warning until code gets written
-
+       */
        return result;
 }
 
@@ -100,14 +120,34 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
 int
 sys_write(int fd, userptr_t buf, size_t size, int *retval)
 {
+  int result = 0;
 
 
+  return result;
 }
  
 int
 sys_close(int fd, userptr_t buf, size_t size, int *retval)
 {
+  int result = 0;
 
+  result = filetable_okfd(proc->p_filetable,fd);
+  if(result == 1){
+
+    filetable_placeat(proc->p_filetable, NULL, fd, );
+
+    //check if previous file was also NULL
+
+    
+
+
+  }
+    
+  
+
+
+
+  return result;
 
 }
 
