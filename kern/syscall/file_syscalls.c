@@ -38,6 +38,14 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	 *
 	 * Check the design document design/filesyscall.txt for the steps
 	 */
+
+	//copy supplied path name
+	kpath = (char*)kmalloc((char)(MAX);
+
+	int temp = openfile_open(kpath, flags, mode, &file);
+
+
+	
 	(void) upath; // suppress compilation warning until code gets written
 	(void) flags; // suppress compilation warning until code gets written
 	(void) mode; // suppress compilation warning until code gets written
