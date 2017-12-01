@@ -79,6 +79,7 @@ int
 sys_read(int fd, userptr_t buf, size_t size, int *retval)
 {
        int result = 0;
+       off_t pos = 0;
        struct openfile *file;
 
        /* 
@@ -100,7 +101,9 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
        }
 
        //contructed uio struct
-       struct uio *temp;
+       struct uio temp;
+       
+       uio_kinit(iovec, &temp, buf, size, pos, UIO_READ);//chekc
 
        //call VOP_READ
        result = VOP_READ(file->of_vnode, temp);
@@ -161,6 +164,8 @@ sys_close(int fd, userptr_t buf, size_t size, int *retval)
 
 
   }
+
+  
     
   
 
