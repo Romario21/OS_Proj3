@@ -32,6 +32,7 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	char *kpath;
 	struct openfile *file;
 	int result = 0;
+	size_t actual;
 
 	/* 
 	 * Your implementation of system call open starts here.  
@@ -41,25 +42,31 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 
 	//copy supplied path name
 
+	if((flags & allflags) != allflags){ //check
+	  return EINVAL;
+	}
 	
 	
-	kpath = (char*)kmalloc((char)(PATH_MAX));
+	kpath = (char*)kmalloc(sizeof(char)*(PATH_MAX));
 
 	//int temp = openfile_open(kpath, flags, mode, &file);
 
-	result = copyinstr(upath, kpath, sizeof(kpath), retval);//check
+	result = copyinstr(upath, kpath, sizeof(kpath), &actual);//check
 	if(result)
 	  return result;
 	
 	//openfile_open();
 	result = openfile_open(kpath, flags, mode, &file);
-	if(result)
+	if(result){
+	  kfree(kpath);
 	  return result;
-
-	result = filetable_place(curproc->p_filetable, file, NULL);//check
-	if(result)
-	  return result;
+	}
 	
+	result = filetable_place(curproc->p_filetable, file, retval);//check
+	if(result){
+	  kfree(kpath);
+	  return result;
+	}
 	
 			       /*	
 	(void) upath; // suppress compilation warning until code gets written
@@ -91,12 +98,18 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
         */
 
        //translate the fd # to an open file object
-       result = filetable_get(curproc->p_filetable, fd, file);
+       result = filetable_get(curproc->p_filetable, fd, &file);
        if(result)
 	 return result;
 
-       lock_aquire(file->of_offsetlock);//check
 
+       bool check = VOP_ISSEEKABLE(file->of_node);
+       if(check){
+	 pos = file->of_offset;
+	 lock_aquire(file->of_offsetlock);//check
+       }
+       
+       
        if(file->of_accmode == O_WRONLY){
 	 lock_release(file->of_offsetlock);
 	 return EBADF; //check
@@ -107,30 +120,32 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
        struct iovec io;
        
        uio_kinit(&io, &ui, buf, size, pos, UIO_READ);//chekc
+       ui.uio_segflg = UIO_USERSPACE;
+       ui.uio_space = proc_getas();
 
        //call VOP_READ
        result = VOP_READ(file->of_vnode, &ui);
-       if(result)
+       if(check)
 	 {
+	   file->of_offset = ui.uio_offset;
 	   lock_release(file->of_offsetlock);
-	   return result;
 	 }
 
        //check:seek position
-       file->of_offset = ui.uio_offset;
+       //file->of_offset = ui.uio_offset;
 
        //unlock
-       lock_release(file->of_offsetlock);
+       //lock_release(file->of_offsetlock);
 
 
        
        //file_table_put()
-       result = filetable_put(curproc->p_filetable, fd, file);
-       if(result)
-	 return result;
+       filetable_put(curproc->p_filetable, fd, file);
+       if(!result)
+	 *retval = size - ui.uio_resid;
 
 
-       *retval = size - ui.uio_resid; //check
+       //check
 
        
        /*
@@ -152,13 +167,25 @@ sys_write(int fd, userptr_t buf, size_t size, int *retval)
        off_t pos = 0;
        struct openfile *file;
 
+       /* 
+        * Your implementation of system call read starts here.  
+        *
+        * Check the design document design/filesyscall.txt for the steps
+        */
+
        //translate the fd # to an open file object
-       result = filetable_get(curproc->p_filetable, fd, file);
+       result = filetable_get(curproc->p_filetable, fd, &file);
        if(result)
 	 return result;
 
-       lock_aquire(file->of_offsetlock);//check
 
+       bool check = VOP_ISSEEKABLE(file->of_node);
+       if(check){
+	 pos = file->of_offset;
+	 lock_aquire(file->of_offsetlock);//check
+       }
+       
+       
        if(file->of_accmode == O_RDONLY){
 	 lock_release(file->of_offsetlock);
 	 return EBADF; //check
@@ -169,31 +196,40 @@ sys_write(int fd, userptr_t buf, size_t size, int *retval)
        struct iovec io;
        
        uio_kinit(&io, &ui, buf, size, pos, UIO_WRITE);//chekc
+       ui.uio_segflg = UIO_USERSPACE;
+       ui.uio_space = proc_getas();
 
-       //call VOP_WRITE
+       //call VOP_READ
        result = VOP_WRITE(file->of_vnode, &ui);
-       if(result)
+       if(check)
 	 {
+	   file->of_offset = ui.uio_offset;
 	   lock_release(file->of_offsetlock);
-	   return result;
 	 }
 
        //check:seek position
-       file->of_offset = ui.uio_offset;
+       //file->of_offset = ui.uio_offset;
 
        //unlock
-       lock_release(file->of_offsetlock);
+       //lock_release(file->of_offsetlock);
 
 
        
        //file_table_put()
-       result = filetable_put(curproc->p_filetable, fd, file);
-       if(result)
-	 return result;
+       filetable_put(curproc->p_filetable, fd, file);
+       if(!result)
+	 *retval = size - ui.uio_resid;
 
 
-       *retval = size - ui.uio_resid; //check
+       //check
 
+       
+       /*
+       (void) fd; // suppress compilation warning until code gets written
+       (void) buf; // suppress compilation warning until code gets written
+       (void) size; // suppress compilation warning until code gets written
+       (void) retval; // suppress compilation warning until code gets written
+       */
        return result;
 }
  
