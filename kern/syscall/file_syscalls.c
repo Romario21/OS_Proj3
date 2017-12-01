@@ -40,12 +40,14 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	 */
 
 	//copy supplied path name
+
+	
 	
 	kpath = (char*)kmalloc((char)(PATH_MAX));
 
 	//int temp = openfile_open(kpath, flags, mode, &file);
 
-	result = copyinstr(upath, kpath, sizeof(kpath), NULL);
+	result = copyinstr(upath, kpath, sizeof(kpath), retval);//check
 	if(result)
 	  return result;
 	
@@ -54,7 +56,7 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	if(result)
 	  return result;
 
-	result = filetable_place(proc->p_filetable, file, NULL);
+	result = filetable_place(curproc->p_filetable, file, NULL);//check
 	if(result)
 	  return result;
 	
@@ -89,42 +91,46 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
         */
 
        //translate the fd # to an open file object
-       result = filetable_get(, fd, );
+       result = filetable_get(curproc->p_filetable, fd, file);
        if(result)
 	 return result;
 
-       lock_aquire(file->of_lock);//check
+       lock_aquire(file->of_offsetlock);//check
 
        if(file->of_accmode == O_WRONLY){
-	 lock_release(file->of_lock);
-	 return dasdasd; //check
+	 lock_release(file->of_offsetlock);
+	 return EBADF; //check
        }
 
        //contructed uio struct
-       struct uio temp;
+       struct uio ui;
+       struct iovec io;
        
-       uio_kinit(iovec, &temp, buf, size, pos, UIO_READ);//chekc
+       uio_kinit(&io, &ui, buf, size, pos, UIO_READ);//chekc
 
        //call VOP_READ
-       result = VOP_READ(file->of_vnode, temp);
+       result = VOP_READ(file->of_vnode, &ui);
        if(result)
 	 {
-	   lock_release(file->of_lock);
+	   lock_release(file->of_offsetlock);
 	   return result;
 	 }
 
        //check:seek position
-       file->of_offset = temp->uio_offset;
+       file->of_offset = ui.uio_offset;
 
        //unlock
-       lock_release(file->of_lock);
+       lock_release(file->of_offsetlock);
 
-       *retval = size - temp->uio_reside; //check
 
+       
        //file_table_put()
-       result = filetable_put(, fd, );
+       result = filetable_put(curproc->p_filetable, fd, file);
        if(result)
 	 return result;
+
+
+       *retval = size - ui.uio_resid; //check
 
        
        /*
@@ -142,35 +148,73 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
 int
 sys_write(int fd, userptr_t buf, size_t size, int *retval)
 {
-  int result = 0;
+       int result = 0;
+       off_t pos = 0;
+       struct openfile *file;
+
+       //translate the fd # to an open file object
+       result = filetable_get(curproc->p_filetable, fd, file);
+       if(result)
+	 return result;
+
+       lock_aquire(file->of_offsetlock);//check
+
+       if(file->of_accmode == O_RDONLY){
+	 lock_release(file->of_offsetlock);
+	 return EBADF; //check
+       }
+
+       //contructed uio struct
+       struct uio ui;
+       struct iovec io;
+       
+       uio_kinit(&io, &ui, buf, size, pos, UIO_WRITE);//chekc
+
+       //call VOP_WRITE
+       result = VOP_WRITE(file->of_vnode, &ui);
+       if(result)
+	 {
+	   lock_release(file->of_offsetlock);
+	   return result;
+	 }
+
+       //check:seek position
+       file->of_offset = ui.uio_offset;
+
+       //unlock
+       lock_release(file->of_offsetlock);
 
 
-  return result;
+       
+       //file_table_put()
+       result = filetable_put(curproc->p_filetable, fd, file);
+       if(result)
+	 return result;
+
+
+       *retval = size - ui.uio_resid; //check
+
+       return result;
 }
  
 int
-sys_close(int fd, userptr_t buf, size_t size, int *retval)
+sys_close(int fd)
 {
   int result = 0;
+  struct openfile *file;
 
-  result = filetable_okfd(proc->p_filetable,fd);
-  if(result == 1){
+  result = filetable_okfd(curproc->p_filetable,fd);
+  if(result == 0)
+    return EBADF;
 
-    filetable_placeat(proc->p_filetable, NULL, fd, );
+  filetable_placeat(curproc->p_filetable, NULL, fd, &file);//check
 
-    //check if previous file was also NULL
+  //check if previous entry in filetable is null
 
-    
-
-
-  }
 
   
-    
+  openfile_decref(file);
   
-
-
-
   return result;
 
 }
@@ -179,8 +223,6 @@ int
 sys_meld(int fd1, int fd2, int fd3)
 {
   int result = 0;
-
-  
 
 
   return result;
