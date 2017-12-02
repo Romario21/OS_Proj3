@@ -52,8 +52,10 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	//int temp = openfile_open(kpath, flags, mode, &file);
 
 	result = copyinstr(upath, kpath, sizeof(kpath), &actual);//check
-	if(result)
+	if(result){
+	  kfree(kpath);
 	  return result;
+	}
 	
 	//openfile_open();
 	result = openfile_open(kpath, flags, mode, &file);
@@ -111,7 +113,7 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
        
        
        if(file->of_accmode == O_WRONLY){
-	 lock_release(file->of_offsetlock);
+	 //lock_release(file->of_offsetlock);
 	 return EBADF; //check
        }
 
@@ -239,7 +241,7 @@ sys_close(int fd)
   int result = 0;
   struct openfile *file;
 
-  result = filetable_okfd(curproc->p_filetable,fd);
+  result = filetable_okfd(curproc->p_filetable,fd);//check
   if(result == 0)
     return EBADF;
 
@@ -256,10 +258,17 @@ sys_close(int fd)
 }
 
 int
-sys_meld(int fd1, int fd2, int fd3)
+sys_meld(userptr_t pn1, userptr_t pn2, userptr_t pn3, int *retval)
 {
+  int fd1, fd2, fd3;
   int result = 0;
+  struct openfile *file1;
+  struct openfile *file2;
+  struct openfile *file3;
 
+  
+
+  
 
   return result;
 }
