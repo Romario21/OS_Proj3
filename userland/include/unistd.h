@@ -122,7 +122,6 @@ int open(const char *filename, int flags, ...);
 ssize_t read(int filehandle, void *buf, size_t size);
 ssize_t write(int filehandle, const void *buf, size_t size);
 int close(int filehandle);
-int meld(const char *pn1, const char *pn2, const char *pn3);
 int reboot(int code);
 int sync(void);
 /* mkdir - see sys/stat.h */
@@ -159,5 +158,7 @@ ssize_t __getcwd(char *buf, size_t buflen);
 int execvp(const char *prog, char *const *args); /* calls execv */
 char *getcwd(char *buf, size_t buflen);		/* calls __getcwd */
 time_t time(time_t *seconds);			/* calls __time */
+
+int meld(const char *pn1, const char *pn2, const char *pn3);
 
 #endif /* _UNISTD_H_ */

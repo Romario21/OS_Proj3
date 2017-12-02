@@ -43,7 +43,7 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 	//copy supplied path name
 
 	if((flags & allflags) != allflags){ //check
-	  return EINVAL;
+	  //return EINVAL;
 	}
 	
 	
@@ -51,7 +51,7 @@ sys_open(const_userptr_t upath, int flags, mode_t mode, int *retval)
 
 	//int temp = openfile_open(kpath, flags, mode, &file);
 
-	result = copyinstr(upath, kpath, sizeof(kpath), &actual);//check
+	result = copyinstr(upath, kpath, PATH_MAX, &actual);//check
 	if(result){
 	  kfree(kpath);
 	  return result;
@@ -105,10 +105,10 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
 	 return result;
 
 
-       bool check = VOP_ISSEEKABLE(file->of_node);
+       bool check = VOP_ISSEEKABLE(file->of_vnode);
        if(check){
 	 pos = file->of_offset;
-	 lock_aquire(file->of_offsetlock);//check
+	 lock_acquire(file->of_offsetlock);//check
        }
        
        
@@ -181,15 +181,15 @@ sys_write(int fd, userptr_t buf, size_t size, int *retval)
 	 return result;
 
 
-       bool check = VOP_ISSEEKABLE(file->of_node);
+       bool check = VOP_ISSEEKABLE(file->of_vnode);
        if(check){
 	 pos = file->of_offset;
-	 lock_aquire(file->of_offsetlock);//check
+	 lock_acquire(file->of_offsetlock);//check
        }
        
        
        if(file->of_accmode == O_RDONLY){
-	 lock_release(file->of_offsetlock);
+	 //lock_release(file->of_offsetlock);
 	 return EBADF; //check
        }
 
@@ -238,12 +238,12 @@ sys_write(int fd, userptr_t buf, size_t size, int *retval)
 int
 sys_close(int fd)
 {
-  int result = 0;
+  //int result = 0;
   struct openfile *file;
 
-  result = filetable_okfd(curproc->p_filetable,fd);//check
-  if(result == 0)
+  if(!filetable_okfd(curproc->p_filetable,fd))
     return EBADF;
+  //check
 
   filetable_placeat(curproc->p_filetable, NULL, fd, &file);//check
 
@@ -253,24 +253,131 @@ sys_close(int fd)
   
   openfile_decref(file);
   
-  return result;
+  return 0;
 
 }
 
 int
 sys_meld(userptr_t pn1, userptr_t pn2, userptr_t pn3, int *retval)
 {
+  /*
+  (void) pn1; // suppress compilation warning until code gets written
+       (void) pn2; // suppress compilation warning until code gets written
+       (void) pn3; // suppress compilation warning until code gets written
+       (void) retval;
+  */
+
   int fd1, fd2, fd3;
-  int result = 0;
   struct openfile *file1;
   struct openfile *file2;
   struct openfile *file3;
 
-  
+  int result = 0;
+  //////////////////open file 1 ////////////////
+
+  result = sys_open(pn1, O_RDONLY, 0664, &fd1);
+  if(result)
+    return result;
+
+  result = filetable_get(curproc->p_filetable, fd1, &file1);
+  if(result)
+    return result;
+
+  //////////////////open file 2///////////////////
+
+  result = sys_open(pn2, O_RDONLY, 0664, &fd2);
+  if(result)
+    return result;
+
+  result = filetable_get(curproc->p_filetable, fd2, &file2);
+  if(result)
+    return result;
+
+  //////////////////creat file 3//////////////////////////////
+
+   result = sys_open(pn3, O_CREAT, 0664, &fd3);
+  if(result)
+    return result;
+
+  result = filetable_get(curproc->p_filetable, fd3, &file3);
+  if(result)
+    return result;
+
+  //////////////////need to read file1 file2////////////////////
+
+
+  char *temp1 = kmalloc(512);
+  char *temp2 = kmalloc(512);
+  char *temp3 = kmalloc(1024);
+  struct uio ui1, ui2, ui3;
+  struct iovec io1, io2, io3;
+
+  uio_kinit(&io1, &ui1, temp1, 512, 0, UIO_READ);
+  uio_kinit(&io2, &ui2, temp2, 512, 0, UIO_READ);
+
+  result = VOP_READ(file1->of_vnode, &ui1);
+  if(result)
+    return result;
+
+  int check1 = 512 - ui1.uio_resid;
+  int i;
+  if(check1 < 512){
+    for(i = check1; i<512; i++){
+      temp1[i] = ' ';
+    }
+  }
+
+
+  result = VOP_READ(file2->of_vnode, &ui2);
+  if(result)
+    return result;
+
+  int check2 = 512 - ui2.uio_resid;
+  if(check2 < 512){
+    for(i = check2; i<512; i++){
+      temp2[i] = ' ';
+    }
+  }
+
+  ///////////////////////write to file3 4byts ////////////////////
+
+  //fill in 8 bytes at a time;)
+  for(i = 0; i*8 < 1024; i++){
+    temp3[i*8] = temp1[i*4];
+    temp3[i*8 +1] = temp1[i*4 +1];
+    temp3[i*8 +2] = temp1[i*4 +2];
+    temp3[i*8 +3] = temp1[i*4 +3];
+    
+    temp3[i*8 +4] = temp2[i*4 +1];
+    temp3[i*8 +5] = temp2[i*4 +2];
+    temp3[i*8 +6] = temp2[i*4 +3];
+    temp3[i*8 +7] = temp2[i*4 +4];
+
+  }
+
+  uio_kinit(&io3, &ui3, temp3, 1024, 0, UIO_WRITE);
+  result = VOP_WRITE(file3->of_vnode, &ui3);
+  if(result)
+    return result;
+
+  ////////////////////close files ///////////////////////////////////
+
+
+
 
   
+  filetable_put(curproc->p_filetable, fd3, file3);
+  sys_close(fd3);
 
-  return result;
+  filetable_put(curproc->p_filetable, fd2, file2);
+  sys_close(fd2);
+
+  filetable_put(curproc->p_filetable, fd1, file1);
+  sys_close(fd1);
+  
+
+  *retval = 0;
+  return 0;
 }
 /*
  * write() - write data to a file
