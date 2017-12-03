@@ -118,6 +118,8 @@ pid_t waitpid(pid_t pid, int *returncode, int flags);
  * arg is the file mode used for creation. Unless you're implementing
  * security and permissions, you can ignore it.
  */
+
+int meld(const char *pn1,const  char *pn2, const char *pn3);
 int open(const char *filename, int flags, ...);
 ssize_t read(int filehandle, void *buf, size_t size);
 ssize_t write(int filehandle, const void *buf, size_t size);
@@ -159,6 +161,5 @@ int execvp(const char *prog, char *const *args); /* calls execv */
 char *getcwd(char *buf, size_t buflen);		/* calls __getcwd */
 time_t time(time_t *seconds);			/* calls __time */
 
-int meld(const char *pn1, const char *pn2, const char *pn3);
 
 #endif /* _UNISTD_H_ */

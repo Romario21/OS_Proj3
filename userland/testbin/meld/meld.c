@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <err.h>
 
+//int meld(const char *path1, const char *file2, const char *file3);
+
 int
 main(int argc, char *argv[])
 {
@@ -14,13 +16,13 @@ main(int argc, char *argv[])
   const char *file2;
   const char *file3;
 
-  int rv;
+  int result = 0;
   
   //int fd1, fd2, fd3;
-
+  //must create testfile01 and testfile02 in os161/root
   if(argc == 0){
-    file1 = "test1";
-    file2 = "test2";
+    file1 = "testfile01";
+    file2 = "testfile02";
   }
 
   else if(argc == 2){
@@ -28,16 +30,15 @@ main(int argc, char *argv[])
     file2 = argv[1];
   }
 
-  else
-    errx(1, "Usage: meld <filename> <filename>");
+    else
+      errx(1, "Usage: meld <filename> <filename>");
 
   file3 = "newfile";
 
-  rv = meld(file1, file2, file3);
+  result = meld(file1, file2, file3);
 
-  if(!rv)
-    printf("failed test");
-
+  if(!result)
+    printf("failed meld\n");
   else
     printf("Passed melding test.\n");
   

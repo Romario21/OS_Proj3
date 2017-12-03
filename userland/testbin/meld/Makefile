@@ -1,4 +1,4 @@
-# Makefile for meldtest
+# Makefile for meld
 
 TOP=../../..
 .include "$(TOP)/mk/os161.config.mk"
